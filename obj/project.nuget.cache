@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "/A0wevq9hA8=",
+  "dgSpecHash": "Pli7ir0np/M=",
   "success": true,
-  "projectFilePath": "C:\\Users\\Asus\\Desktop\\UserManagementApp-main\\UserManagementApp-main\\UserManagementApp.csproj",
+  "projectFilePath": "C:\\Users\\Asus\\Desktop\\Sol_task4\\Fin_\\UserManagementApp.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Asus\\.nuget\\packages\\bcrypt.net-next\\4.0.3\\bcrypt.net-next.4.0.3.nupkg.sha512",
     "C:\\Users\\Asus\\.nuget\\packages\\bouncycastle.cryptography\\2.2.1\\bouncycastle.cryptography.2.2.1.nupkg.sha512",
