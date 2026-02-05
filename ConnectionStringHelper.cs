@@ -12,22 +12,29 @@ namespace UserManagementApp
                     "Connection string is empty. Set DATABASE_URL or ConnectionStrings:DefaultConnection.");
             }
 
-            var input = rawConnectionString.Trim();
+            var normalizedInput = rawConnectionString.Trim();
 
-            if (!input.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) &&
-                !input.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
+            if (!normalizedInput.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase)
+                && !normalizedInput.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
             {
-                return input;
+                return normalizedInput;
             }
 
-            var uri = new Uri(input);
-            var userInfo = uri.UserInfo.Split(':', 2);
+            var databaseUri = new Uri(normalizedInput);
+            var userInfo = databaseUri.UserInfo.Split(':', 2);
+
+            if (userInfo.Length != 2)
+                throw new InvalidOperationException("DATABASE_URL must include username and password in the URI user info.");
+
+            var databaseName = databaseUri.AbsolutePath.Trim('/');
+            if (string.IsNullOrWhiteSpace(databaseName))
+                throw new InvalidOperationException("DATABASE_URL must include a database name in the path.");
 
             var builder = new NpgsqlConnectionStringBuilder
             {
-                Host = uri.Host,
-                Port = uri.Port > 0 ? uri.Port : 5432,
-                Database = uri.AbsolutePath.Trim('/'),
+                Host = databaseUri.Host,
+                Port = databaseUri.Port > 0 ? databaseUri.Port : 5432,
+                Database = databaseName,
                 Username = Uri.UnescapeDataString(userInfo[0]),
                 Password = Uri.UnescapeDataString(userInfo[1]),
                 SslMode = SslMode.Require,

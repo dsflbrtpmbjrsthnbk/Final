@@ -1,22 +1,22 @@
 using Microsoft.EntityFrameworkCore;
 using UserManagementApp.Data;
-using UserManagementApp.Services;
-using UserManagementApp;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add services to the container
 builder.Services.AddControllersWithViews();
 
-var rawConnectionString =
-    Environment.GetEnvironmentVariable("DATABASE_URL")
-    ?? builder.Configuration.GetConnectionString("DefaultConnection");
+// Получаем строку подключения из среды или appsettings.json
+var rawConnectionString = Environment.GetEnvironmentVariable("DATABASE_URL")
+                         ?? builder.Configuration.GetConnectionString("DefaultConnection");
 
-var connectionString =
-    ConnectionStringHelper.BuildPostgresConnectionString(rawConnectionString);
+var connectionString = UserManagementApp.ConnectionStringHelper
+    .BuildPostgresConnectionString(rawConnectionString);
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
 
+// Сессии
 builder.Services.AddSession(options =>
 {
     options.IdleTimeout = TimeSpan.FromHours(2);
@@ -24,7 +24,8 @@ builder.Services.AddSession(options =>
     options.Cookie.IsEssential = true;
 });
 
-builder.Services.AddScoped<IEmailService, EmailService>();
+// Email сервис
+builder.Services.AddScoped<UserManagementApp.Services.IEmailService, UserManagementApp.Services.EmailService>();
 builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
@@ -42,6 +43,7 @@ app.UseRouting();
 app.UseSession();
 app.UseAuthorization();
 
+// Default route
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Account}/{action=Login}/{id?}");
