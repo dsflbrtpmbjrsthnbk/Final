@@ -6,9 +6,24 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
 
+// Получаем строку подключения
 var connectionString =
     Environment.GetEnvironmentVariable("DATABASE_URL")
     ?? builder.Configuration.GetConnectionString("DefaultConnection");
+
+// Если строка в формате Render (postgres://user:pass@host:port/db)
+if (!string.IsNullOrEmpty(connectionString) && connectionString.StartsWith("postgres://"))
+{
+    var databaseUri = new Uri(connectionString);
+    var userInfo = databaseUri.UserInfo.Split(':');
+    var host = databaseUri.Host;
+    var port = databaseUri.Port;
+    var db = databaseUri.AbsolutePath.TrimStart('/');
+    var username = userInfo[0];
+    var password = userInfo[1];
+
+    connectionString = $"Host={host};Port={port};Database={db};Username={username};Password={password};SSL Mode=Prefer;Trust Server Certificate=true";
+}
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
