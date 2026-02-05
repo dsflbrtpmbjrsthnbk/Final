@@ -14,7 +14,7 @@ namespace UserManagementApp.Controllers
         private readonly ILogger<AccountController> _logger;
 
         public AccountController(
-            ApplicationDbContext context, 
+            ApplicationDbContext context,
             IEmailService emailService,
             ILogger<AccountController> logger)
         {
@@ -22,6 +22,7 @@ namespace UserManagementApp.Controllers
             _emailService = emailService;
             _logger = logger;
         }
+
         [HttpGet]
         public IActionResult Login()
         {
@@ -31,6 +32,7 @@ namespace UserManagementApp.Controllers
             }
             return View();
         }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(string email, string password)
@@ -46,13 +48,7 @@ namespace UserManagementApp.Controllers
                 var user = await _context.Users
                     .FirstOrDefaultAsync(u => u.Email.ToLower() == email.ToLower());
 
-                if (user == null)
-                {
-                    TempData["ErrorMessage"] = "Invalid email or password.";
-                    return View();
-                }
-
-                if (!BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
+                if (user == null || !BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
                 {
                     TempData["ErrorMessage"] = "Invalid email or password.";
                     return View();
@@ -71,7 +67,6 @@ namespace UserManagementApp.Controllers
                 HttpContext.Session.SetString("UserEmail", user.Email);
 
                 _logger.LogInformation($"User {user.Email} logged in successfully");
-
                 TempData["SuccessMessage"] = "Login successful!";
                 return RedirectToAction("Index", "Admin");
             }
@@ -99,19 +94,19 @@ namespace UserManagementApp.Controllers
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(name) || 
-                    string.IsNullOrWhiteSpace(email) || 
-                    string.IsNullOrWhiteSpace(password))
+                if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
                 {
                     TempData["ErrorMessage"] = "All fields are required.";
                     return View();
                 }
-                var verificationToken = Guid.NewGuid().ToString();
+
                 var passwordHash = BCrypt.Net.BCrypt.HashPassword(password);
+                var verificationToken = Guid.NewGuid().ToString();
+
                 var user = new User
                 {
-                    Name = name,
-                    Email = email.ToLower(),
+                    Name = name.Trim(),
+                    Email = email.ToLower().Trim(),
                     PasswordHash = passwordHash,
                     Status = "unverified",
                     RegistrationTime = DateTime.UtcNow,
@@ -121,24 +116,24 @@ namespace UserManagementApp.Controllers
                 _context.Users.Add(user);
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation($"User {user.Email} registered successfully");
+                _logger.LogInformation($"User registered successfully: {user.Email}");
 
-               
+                // Отправка письма с токеном верификации
                 _ = _emailService.SendVerificationEmailAsync(user.Email, user.Name, verificationToken);
 
-                TempData["SuccessMessage"] = "Registration successful! A verification email has been sent to your address. You can login now.";
+                TempData["SuccessMessage"] = "Registration successful! Verification email sent.";
                 return RedirectToAction("Login");
             }
-            catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("IX_Users_Email_Unique") == true ||
-                                               ex.InnerException?.Message.Contains("duplicate key") == true)
+            catch (DbUpdateException dbEx) when (dbEx.InnerException?.Message.Contains("IX_Users_Email_Unique") == true ||
+                                               dbEx.InnerException?.Message.Contains("duplicate key") == true)
             {
-                _logger.LogWarning($"Attempted to register with existing email: {email}");
+                _logger.LogWarning($"Attempted to register with existing email: {email}. InnerException: {dbEx.InnerException?.Message}");
                 TempData["ErrorMessage"] = "This email is already registered. Please use a different email or login.";
                 return View();
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Error during registration: {ex.Message}");
+                _logger.LogError($"Error during registration for {email}. Exception: {ex}");
                 TempData["ErrorMessage"] = "An error occurred during registration. Please try again.";
                 return View();
             }
@@ -163,16 +158,14 @@ namespace UserManagementApp.Controllers
                     TempData["ErrorMessage"] = "Invalid or expired verification token.";
                     return RedirectToAction("Login");
                 }
+
                 if (user.Status == "unverified")
-                {
                     user.Status = "active";
-                }
 
                 user.EmailVerificationToken = null;
                 await _context.SaveChangesAsync();
 
                 _logger.LogInformation($"Email verified for user {user.Email}");
-
                 TempData["SuccessMessage"] = "Email verified successfully! You can now login.";
                 return RedirectToAction("Login");
             }
@@ -192,6 +185,7 @@ namespace UserManagementApp.Controllers
             TempData["SuccessMessage"] = "Logged out successfully.";
             return RedirectToAction("Login");
         }
+
         private int? GetUniqIdValue()
         {
             return HttpContext.Session.GetInt32("UserId");
