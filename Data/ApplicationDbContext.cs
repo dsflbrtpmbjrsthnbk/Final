@@ -17,6 +17,13 @@ namespace UserManagementApp.Data
             base.OnModelCreating(modelBuilder);
 
             modelBuilder.Entity<User>()
+                .HasKey(u => u.Id);
+
+            modelBuilder.Entity<User>()
+                .Property(u => u.Id)
+                .HasDefaultValueSql("gen_random_uuid()");
+
+            modelBuilder.Entity<User>()
                 .HasIndex(u => u.Email)
                 .IsUnique()
                 .HasDatabaseName("IX_Users_Email_Unique");

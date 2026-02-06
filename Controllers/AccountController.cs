@@ -13,10 +13,7 @@ namespace UserManagementApp.Controllers
         private readonly IEmailService _emailService;
         private readonly ILogger<AccountController> _logger;
 
-        public AccountController(
-            ApplicationDbContext context,
-            IEmailService emailService,
-            ILogger<AccountController> logger)
+        public AccountController(ApplicationDbContext context, IEmailService emailService, ILogger<AccountController> logger)
         {
             _context = context;
             _emailService = emailService;
@@ -26,7 +23,7 @@ namespace UserManagementApp.Controllers
         [HttpGet]
         public IActionResult Login()
         {
-            if (HttpContext.Session.GetInt32("UserId") != null)
+            if (HttpContext.Session.GetString("UserId") != null)
             {
                 return RedirectToAction("Index", "Admin");
             }
@@ -63,7 +60,7 @@ namespace UserManagementApp.Controllers
                 user.LastLoginTime = DateTime.UtcNow;
                 await _context.SaveChangesAsync();
 
-                HttpContext.Session.SetInt32("UserId", user.Id);
+                HttpContext.Session.SetString("UserId", user.Id.ToString());
                 HttpContext.Session.SetString("UserEmail", user.Email);
 
                 _logger.LogInformation($"User {user.Email} logged in successfully");
@@ -81,7 +78,7 @@ namespace UserManagementApp.Controllers
         [HttpGet]
         public IActionResult Register()
         {
-            if (HttpContext.Session.GetInt32("UserId") != null)
+            if (HttpContext.Session.GetString("UserId") != null)
             {
                 return RedirectToAction("Index", "Admin");
             }
@@ -117,8 +114,6 @@ namespace UserManagementApp.Controllers
                 await _context.SaveChangesAsync();
 
                 _logger.LogInformation($"User registered successfully: {user.Email}");
-
-                // Отправка письма с токеном верификации
                 _ = _emailService.SendVerificationEmailAsync(user.Email, user.Name, verificationToken);
 
                 TempData["SuccessMessage"] = "Registration successful! Verification email sent.";
@@ -150,9 +145,7 @@ namespace UserManagementApp.Controllers
                     return RedirectToAction("Login");
                 }
 
-                var user = await _context.Users
-                    .FirstOrDefaultAsync(u => u.EmailVerificationToken == token);
-
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.EmailVerificationToken == token);
                 if (user == null)
                 {
                     TempData["ErrorMessage"] = "Invalid or expired verification token.";
@@ -186,9 +179,10 @@ namespace UserManagementApp.Controllers
             return RedirectToAction("Login");
         }
 
-        private int? GetUniqIdValue()
+        private Guid? GetUniqIdValue()
         {
-            return HttpContext.Session.GetInt32("UserId");
+            var val = HttpContext.Session.GetString("UserId");
+            return val != null ? Guid.Parse(val) : null;
         }
     }
 }
