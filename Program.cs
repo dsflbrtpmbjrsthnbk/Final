@@ -3,10 +3,8 @@ using UserManagementApp.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container
 builder.Services.AddControllersWithViews();
 
-// Получаем строку подключения из среды или appsettings.json
 var rawConnectionString = Environment.GetEnvironmentVariable("DATABASE_URL")
                          ?? builder.Configuration.GetConnectionString("DefaultConnection");
 
@@ -16,7 +14,6 @@ var connectionString = UserManagementApp.ConnectionStringHelper
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
 
-// Сессии
 builder.Services.AddSession(options =>
 {
     options.IdleTimeout = TimeSpan.FromHours(2);
@@ -24,7 +21,6 @@ builder.Services.AddSession(options =>
     options.Cookie.IsEssential = true;
 });
 
-// Email сервис
 builder.Services.AddScoped<UserManagementApp.Services.IEmailService, UserManagementApp.Services.EmailService>();
 builder.Services.AddHttpContextAccessor();
 
@@ -43,7 +39,6 @@ app.UseRouting();
 app.UseSession();
 app.UseAuthorization();
 
-// Default route
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Account}/{action=Login}/{id?}");
